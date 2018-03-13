@@ -3,8 +3,9 @@
 #include <SFML\Graphics.hpp>
 #include <thread>
 
-void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, unsigned short* ownId, std::vector<Player>*aPlayers,bool* start) {
-	while (true) {
+void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, int* ownId, std::vector<Player>*aPlayers,bool* start) {
+	bool exit=false;
+	while (!exit) {
 		sf::Packet receptionPacket;
 		std::string code;
 
@@ -18,20 +19,41 @@ void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, unsign
 				receptionPacket >> *ownId;
 
 				for (int i = 0; i < 6; i++) {
-					Player aNewPlayer;
-					receptionPacket >> aNewPlayer.userName;
-					receptionPacket >> aNewPlayer.id;
-					aPlayers->push_back(aNewPlayer);
-					std::cout<<"Receiving player with userName " << aPlayers->at(i).userName << " and id " << aPlayers->at(i).id << "\n";
+					std::string userName;
+					int id;
+
+					receptionPacket >> userName;
+					receptionPacket >> id;
+
+
+					Player player(userName,id);
+
+					aPlayers->push_back(player);
+
+
+
+
+					//delete aNewPlayer;
+					std::cout<<"Receiving player with userName " << player.GetUserName() << " and id " << player.id << "\n";
 
 				}
 			}
 			else if (code == "START_") {
 				*start = true;
 			}
+			else if (code == "MSJ_") {
+				std::string mensaje;
+				receptionPacket >> mensaje;
+				aMsjs->push_back(mensaje);
+			}
 
 		}
-		else {
+		else if(status==sf::TcpSocket::Status::Disconnected){
+			std::cout << "Desconexion del servidor\n";
+			socket->disconnect();
+			exit = true;
+		}
+		else if (status == sf::TcpSocket::Status::Error) {
 			std::cout << "ERROR CRITICO DE RECEPCIÓN\n";
 		}
 	}
@@ -40,7 +62,7 @@ void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, unsign
 void main() {
 	int numPlayers = 6;
 	std::string myUserName = "";
-	unsigned short myId;
+	int myId;
 
 	std::cout << "Enter your username: \n";
 	std::cin >> myUserName;
@@ -69,10 +91,6 @@ void main() {
 		nameSendPacket << myUserName;
 
 		socket->send(nameSendPacket);
-
-		while (!start) {
-
-		}
 
 		////////////TODOS CONECTADOS//////////////////
 		////////////TODOS CONECTADOS//////////////////
@@ -133,10 +151,7 @@ void main() {
 						mensajeDefinitivo += "-" + mensaje;
 						sf::Packet packet;
 
-						if (mensajeDefinitivo.size() > 46) {
-							mensajeDefinitivo.insert(mensajeDefinitivo.at(42), "\n");
-						}
-
+						packet << "MSJ_";
 						packet << mensajeDefinitivo;
 						if (mensaje == " >/Disconnect") {
 							//Close(aSock, finish);

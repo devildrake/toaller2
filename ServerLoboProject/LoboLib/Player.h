@@ -6,10 +6,19 @@ public:
 	std::string userName;
 	enum ROLE{_WOLF,_VILLAGER,_WITCH,_CHILD};
 	ROLE role;
-	unsigned short id;
+	int id;
 
 	std::string GetUserName() {
 		return userName;
+	}
+
+	Player() {
+
+	}
+
+	Player(std::string n, int id) {
+		userName = n;
+		this->id = id;
 	}
 
 };
