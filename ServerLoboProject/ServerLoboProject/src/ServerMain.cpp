@@ -32,7 +32,94 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 	}
 }
 
+void EndTurn(PlayerServer::Turn* turnoACambiar,std::vector<PlayerServer*>* aPlayers) {
+	std::vector<PlayerServer*> deadPlayers;
+
+
+	switch (*turnoACambiar) {
+	case PlayerServer::Turn::_DAY:
+		bool draw;
+		PlayerServer* mostVotedPlayer = aPlayers->at(0);
+		for (int i = 0; i < aPlayers->size(); i++) {
+			if (aPlayers->at(i)->currentVotes > mostVotedPlayer->currentVotes) {
+				mostVotedPlayer = aPlayers->at(i);
+				draw = false;
+			}
+			else if (aPlayers->at(i)->currentVotes == mostVotedPlayer->currentVotes) {
+				draw = true;
+			}
+		}
+
+		if(!draw){
+			sf::Packet deathNotificationPacket;
+			deathNotificationPacket << "DEATH_";
+			deathNotificationPacket << mostVotedPlayer->id;
+			for (int j = 0; j < aPlayers->size(); j++) {
+				aPlayers->at(j)->socket->send(deathNotificationPacket);
+			}
+		}
+
+
+		*turnoACambiar = PlayerServer::Turn::_WOLVES;
+		break;
+	case PlayerServer::Turn::_WOLVES:
+
+		for (int i = 0; i < aPlayers->size(); i++) {
+			if (/*aPlayers->at(i)->wasAlive&&*/!aPlayers->at(i)->alive) {
+				deadPlayers.push_back(aPlayers->at(i));
+				aPlayers->at(i)->wasAlive = false;
+			}
+			aPlayers->at(i)->voted = false;
+		}
+
+		for (int i = 0; i < deadPlayers.size(); i++) {
+			sf::Packet deathNotificationPacket;
+
+			deathNotificationPacket << "DEATH_";
+			deathNotificationPacket << deadPlayers.at(i)->id;
+			for (int j = 0; j < aPlayers->size(); j++) {
+				aPlayers->at(i)->socket->send(deathNotificationPacket);
+			}
+		}
+		*turnoACambiar = PlayerServer::Turn::_WITCH;
+
+		for (int i = 0; i < aPlayers->size(); i++) {
+			if (aPlayers->at(i)->wasAlive&&!aPlayers->at(i)->alive) {
+				deadPlayers.push_back(aPlayers->at(i));
+				aPlayers->at(i)->wasAlive = false;
+			}
+			aPlayers->at(i)->voted = false;
+		}
+
+		for (int i = 0; i < deadPlayers.size(); i++) {
+			sf::Packet deathNotificationPacket;
+
+			deathNotificationPacket << "DEATH_";
+			deathNotificationPacket << deadPlayers.at(i)->id;
+			for (int j = 0; j < aPlayers->size(); j++) {
+				aPlayers->at(j)->socket->send(deathNotificationPacket);
+			}
+		}
+		break;
+	case PlayerServer::Turn::_WITCH:
+		*turnoACambiar = PlayerServer::Turn::_DAY;
+		break;
+	}
+
+	for (int i = 0; i < aPlayers->size(); i++) {
+		sf::Packet packet;
+		packet << "END_TURN_";
+		aPlayers->at(i)->socket->send(packet);
+
+	}
+
+}
+
 void main() {
+	PlayerServer* witch;
+	std::vector<PlayerServer*> wolves;
+
+	PlayerServer::Turn currentTurn = PlayerServer::Turn::_DAY;
 	int numPlayers = 6;
 	sf::TcpListener listener;
 	std::vector<std::string> aMensajes;
@@ -41,6 +128,7 @@ void main() {
 	bool exit = false;
 	status = listener.listen(50000);
 	std::queue<sf::Packet> aEventos;
+	bool witchPotions[2] = { false,false };
 	
 	if (status != sf::TcpListener::Done) {
 		std::cout << "Error al vincularse al puerto " + listener.getLocalPort() << std::endl;
@@ -107,13 +195,13 @@ void main() {
 				infoPacket << aPlayers[j]->id;
 			}
 			aPlayers[i]->socket->send(infoPacket);
+			if (aPlayers[i]->role == Player::ROLE::_WOLF) {
+				wolves.push_back(aPlayers[i]);
+			}
+			else if (aPlayers[i]->role == Player::ROLE::_WITCH) {
+				witch = aPlayers[i];
+			}
 
-		}
-		
-		for (int i = 0; i < numPlayers; i++) {
-			sf::Packet infoPacket;
-			infoPacket << "START_";
-			aPlayers[i]->socket->send(infoPacket);
 		}
 
 		while (!exit) {
@@ -145,8 +233,99 @@ void main() {
 
 					}
 				}
+				else if (code == "VOTE_") {
+					int votedPlayerId;
+					int votingPlayerId;
+					receivedPacket >> votedPlayerId;
+					receivedPacket >> votingPlayerId;
+					switch (currentTurn) {
+					case PlayerServer::Turn::_DAY:
+						if (!aPlayers[votingPlayerId]->voted) {
+							aPlayers[votingPlayerId]->voted = true;
+							aPlayers[votedPlayerId]->currentVotes++;
+						}
+						break;
+					case PlayerServer::Turn::_WOLVES:
+						if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WOLF) {
+							if (!aPlayers[votingPlayerId]->voted) {
+								aPlayers[votingPlayerId]->voted = true;
+								aPlayers[votedPlayerId]->currentVotes++;
+							}
+						}
+						break;
+					case PlayerServer::Turn::_WITCH:
+						if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WITCH) {
+							int toKillVotedPlayerId;
+							receivedPacket >> toKillVotedPlayerId;
 
+							if (votedPlayerId >= 0 && votedPlayerId < 13) {
+								if (!witchPotions[0]) {
+									witchPotions[0] = true;
+									aPlayers[toKillVotedPlayerId]->alive = true;
+								}
+							}
+
+							if (toKillVotedPlayerId >= 0 && toKillVotedPlayerId < 13) {
+								if (!witchPotions[1]) {
+									witchPotions[1] = true;
+									aPlayers[toKillVotedPlayerId]->currentVotes++;
+								}
+							}
+
+							//ENVIAR UN END_TURN Y RESULTADOS
+
+
+						}
+						break;
+					}
+				}
 				aEventos.pop();
+
+				switch (currentTurn) {
+				case PlayerServer::Turn::_DAY:
+					bool allVoted = true;
+					for (int i = 0; i < numPlayers; i++) {
+						if (aPlayers[i]->alive) {
+							if (!aPlayers[i]->voted) {
+								allVoted = false;
+							}
+						}
+					}
+
+					if (allVoted) {
+						EndTurn(&currentTurn,&aPlayers);
+					}
+
+
+					break;
+				case PlayerServer::Turn::_WOLVES:
+
+
+
+
+
+					break;
+				case PlayerServer::Turn::_WITCH:
+
+					break;
+				}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 			}
 

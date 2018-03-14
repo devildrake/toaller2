@@ -35,11 +35,11 @@ void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, int* o
 
 					//delete aNewPlayer;
 					std::cout<<"Receiving player with userName " << player.GetUserName() << " and id " << player.id << "\n";
-
 				}
-			}
-			else if (code == "START_") {
 				*start = true;
+				aMsjs->push_back("Welcome to the world of Castronegro's wolf");
+				aMsjs->push_back("The night will start shortly, stay safe");
+
 			}
 			else if (code == "MSJ_") {
 				std::string mensaje;
