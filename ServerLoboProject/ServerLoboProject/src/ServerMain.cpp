@@ -34,12 +34,10 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 }
 
 void ResetVotes(std::vector<PlayerServer*>*aPlayers) {
-
 	for (int i = 0; i < aPlayers->size(); i++) {
 		aPlayers->at(i)->voted = false;
 		aPlayers->at(i)->currentVotes = 0;
 	}
-
 }
 
 void EndTurn(PlayerServer::Turn* turnoACambiar,std::vector<PlayerServer*>* aPlayers) {
@@ -132,6 +130,7 @@ void EndTurn(PlayerServer::Turn* turnoACambiar,std::vector<PlayerServer*>* aPlay
 }
 
 void main() {
+	std::cout << "Servidor iniciado. Esperando conexiones..." << std::endl;
 	srand(time(NULL));
 	std::vector<PlayerServer*> witch;
 	std::vector<PlayerServer*> wolves;
@@ -164,6 +163,7 @@ void main() {
 				status = socket->receive(namePacket);
 
 				if (status == sf::Socket::Done) {
+					std::cout << "Ha llegado algo" << std::endl;
 					std::string receiveCode;
 					namePacket >> receiveCode;
 
@@ -173,12 +173,14 @@ void main() {
 						namePacket >> aUserName;
 						PlayerServer* aPlayer = new PlayerServer(socket, aUserName);
 						aPlayer->id = i;
-						std::cout << "Player with id " << aPlayer->id << " and named " << aPlayer->GetUserName()<<"\n";
+						std::cout << "Player with id " << aPlayer->id << " and named " << aPlayer->GetUserName() << "\n";
 						aPlayer->role = Player::ROLE::_VILLAGER;
 						aPlayers.push_back(aPlayer);
 						namePacket.clear();
 					}
-
+					else {
+						namePacket.clear();
+					}
 
 				}
 				else if(status==sf::Socket::Disconnected) {
@@ -202,287 +204,266 @@ void main() {
 
 		std::thread receptionThread(&socketSelectorMethod, &aPlayers, &aEventos);
 
+		if (wolves.size() == 0) {
 
-
-
-				if (wolves.size() == 0) {
-
-					while (wolves.size() < 3) {
-						int randomNumber = rand() % numPlayers;
-						if (aPlayers[randomNumber]->role==Player::ROLE::_VILLAGER) {
-							aPlayers[randomNumber]->role = Player::ROLE::_WOLF;
-							wolves.push_back(aPlayers[randomNumber]);
-						}
-					}
-
-					std::cout << "Se asignan " << wolves.size() << " lobos\n";
-
-					while (witch.size() == 0) {
-						int randomNumber = rand() % numPlayers;
-						if (aPlayers[randomNumber]->role == Player::ROLE::_VILLAGER) {
-							aPlayers[randomNumber]->role = Player::ROLE::_WITCH;
-							witch.push_back(aPlayers[randomNumber]);
-						}
-					}
-
-
-
-					for (int i = 0; i < numPlayers; i++) {
-
-
-						sf::Packet infoPacket;
-						infoPacket << "PLAYERS_";
-						infoPacket << i;
-						int roleInt = (int)aPlayers[i]->role;
-						roleInt = 1;
-						infoPacket << roleInt;
-
-						std::cout << "INTEGER " << (int)aPlayers[i]->role << "\n";
-
-						for (int j = 0; j < numPlayers; j++) {
-							infoPacket << aPlayers[j]->GetUserName();
-							aPlayers[j]->id = j;
-							infoPacket << aPlayers[j]->id;
-						}
-						aPlayers[i]->socket->send(infoPacket);
-						
-						std::cout << "Sending info to player " << aPlayers[i]->id<<"\n";
-					}
-
+			while (wolves.size() < 3) {
+				int randomNumber = rand() % numPlayers;
+				if (aPlayers[randomNumber]->role==Player::ROLE::_VILLAGER) {
+					aPlayers[randomNumber]->role = Player::ROLE::_WOLF;
+					wolves.push_back(aPlayers[randomNumber]);
 				}
+			}
+
+			std::cout << "Se asignan " << wolves.size() << " lobos\n";
+
+			while (witch.size() == 0) {
+				int randomNumber = rand() % numPlayers;
+				if (aPlayers[randomNumber]->role == Player::ROLE::_VILLAGER) {
+					aPlayers[randomNumber]->role = Player::ROLE::_WITCH;
+					witch.push_back(aPlayers[randomNumber]);
+				}
+			}
 
 
-				while (!exit) {
-					if (aEventos.size() > 0) {
-						sf::Packet receivedPacket = aEventos.front();
-						sf::Packet sendPacket;
-						std::string code;
 
-						receivedPacket >> code;
+			for (int i = 0; i < numPlayers; i++) {
 
-						if (code == "MSJ_") {
-							std::string mensaje;
-							receivedPacket >> mensaje;
-							sendPacket << "MSJ_";
 
-							sendPacket << mensaje;
+				sf::Packet infoPacket;
+				infoPacket << "PLAYERS_";
+				infoPacket << i;
+				int roleInt = (int)aPlayers[i]->role;
+				roleInt = 1;
+				infoPacket << roleInt;
 
-							sf::TcpSocket::Status status;
+				std::cout << "INTEGER " << (int)aPlayers[i]->role << "\n";
 
-							switch (currentTurn) {
-							case Player::Turn::_DAY:
-								for (int i = 0; i < aPlayers.size(); i++) {
-									status = aPlayers[i]->socket->send(sendPacket);
+				for (int j = 0; j < numPlayers; j++) {
+					infoPacket << aPlayers[j]->GetUserName();
+					aPlayers[j]->id = j;
+					infoPacket << aPlayers[j]->id;
+				}
+				status = aPlayers[i]->socket->send(infoPacket);
+				if (status != sf::Socket::Done) {
+					std::cout << "La informacion no se ha podido mandar correctamente" << std::endl;
+				}
+				else {
+					std::cout << "Sending info to player " << aPlayers[i]->id << "\n";
+				}
+			}
 
-									if (status != sf::TcpSocket::Done) {
-										std::cout << "NotDone\n";
-									}
-									else {
-										std::cout << "Sent\n";
-									}
+		}
 
-								}
-								break;
-							case Player::Turn::_WOLVES:
-								for (int i = 0; i < wolves.size(); i++) {
-									status = wolves[i]->socket->send(sendPacket);
-									if (status != sf::TcpSocket::Done) {
-										std::cout << "NotDone\n";
-									}
-									else {
-										std::cout << "Sent\n";
-									}
 
-								}
-								break;
-							case Player::Turn::_WITCHTURN:
-								break;
+		while (!exit) {
+			if (aEventos.size() > 0) {
+				sf::Packet receivedPacket = aEventos.front();
+				sf::Packet sendPacket;
+				std::string code;
+
+				receivedPacket >> code;
+
+				if (code == "MSJ_") {
+					std::string mensaje;
+					receivedPacket >> mensaje;
+					sendPacket << "MSJ_";
+
+					sendPacket << mensaje;
+
+					sf::TcpSocket::Status status;
+
+					switch (currentTurn) {
+					case Player::Turn::_DAY:
+						for (int i = 0; i < aPlayers.size(); i++) {
+							status = aPlayers[i]->socket->send(sendPacket);
+
+							if (status != sf::TcpSocket::Done) {
+								std::cout << "NotDone\n";
 							}
+							else {
+								std::cout << "Sent\n";
+							}
+
+						}
+						break;
+					case Player::Turn::_WOLVES:
+						for (int i = 0; i < wolves.size(); i++) {
+							status = wolves[i]->socket->send(sendPacket);
+							if (status != sf::TcpSocket::Done) {
+								std::cout << "NotDone\n";
+							}
+							else {
+								std::cout << "Sent\n";
+							}
+
+						}
+						break;
+					case Player::Turn::_WITCHTURN:
+						break;
+					}
 
 
 							
+				}
+				else if (code == "VOTE_") {
+					int votedPlayerId;
+					int votingPlayerId;
+
+					switch (currentTurn) {
+					case PlayerServer::Turn::_DAY:
+
+						receivedPacket >> votedPlayerId;
+						receivedPacket >> votingPlayerId;
+
+						if (!aPlayers[votingPlayerId]->voted) {
+							aPlayers[votingPlayerId]->voted = true;
+							aPlayers[votedPlayerId]->currentVotes++;
 						}
-						else if (code == "VOTE_") {
-							int votedPlayerId;
-							int votingPlayerId;
+						break;
+					case PlayerServer::Turn::_WOLVES:
 
-							switch (currentTurn) {
-							case PlayerServer::Turn::_DAY:
+						receivedPacket >> votedPlayerId;
+						receivedPacket >> votingPlayerId;
 
-								receivedPacket >> votedPlayerId;
-								receivedPacket >> votingPlayerId;
-
-								if (!aPlayers[votingPlayerId]->voted) {
-									aPlayers[votingPlayerId]->voted = true;
-									aPlayers[votedPlayerId]->currentVotes++;
-								}
-								break;
-							case PlayerServer::Turn::_WOLVES:
-
-								receivedPacket >> votedPlayerId;
-								receivedPacket >> votingPlayerId;
-
-								if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WOLF) {
-									if (!aPlayers[votingPlayerId]->voted) {
-										aPlayers[votingPlayerId]->voted = true;
-										aPlayers[votedPlayerId]->currentVotes++;
+						if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WOLF) {
+							if (!aPlayers[votingPlayerId]->voted) {
+								aPlayers[votingPlayerId]->voted = true;
+								aPlayers[votedPlayerId]->currentVotes++;
+							}
+						}
+						break;
+					case PlayerServer::Turn::_WITCHTURN:
+						if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WITCH) {
+							int toKillVotedPlayerId;
+							int toHealVotedPlayerId;
+							receivedPacket >> toKillVotedPlayerId;
+							receivedPacket >> toHealVotedPlayerId;
+							if (!witchVotes[0]) {
+								if (votedPlayerId >= 0 && votedPlayerId < 13) {
+									if (!witchPotions[0]) {
+										witchPotions[0] = true;
+										aPlayers[toKillVotedPlayerId]->alive = false;
 									}
 								}
-								break;
-							case PlayerServer::Turn::_WITCHTURN:
-								if (aPlayers[votingPlayerId]->role == PlayerServer::ROLE::_WITCH) {
-									int toKillVotedPlayerId;
-									int toHealVotedPlayerId;
-									receivedPacket >> toKillVotedPlayerId;
-									receivedPacket >> toHealVotedPlayerId;
-									if (!witchVotes[0]) {
-										if (votedPlayerId >= 0 && votedPlayerId < 13) {
-											if (!witchPotions[0]) {
-												witchPotions[0] = true;
-												aPlayers[toKillVotedPlayerId]->alive = false;
-											}
+								witchVotes[0] = true;
+							}
+							else if (!witchVotes[1]) {
+								if (toKillVotedPlayerId >= 0 && toKillVotedPlayerId < 13) {
+									if (aPlayers[toHealVotedPlayerId]->wasAlive && !aPlayers[toHealVotedPlayerId]->alive) {
+										if (!witchPotions[1]) {
+											witchPotions[1] = true;
+											aPlayers[toHealVotedPlayerId]->alive = true;
+											//aPlayers[toKillVotedPlayerId]->currentVotes++;
 										}
-										witchVotes[0] = true;
-									}
-									else if (!witchVotes[1]) {
-										if (toKillVotedPlayerId >= 0 && toKillVotedPlayerId < 13) {
-											if (aPlayers[toHealVotedPlayerId]->wasAlive && !aPlayers[toHealVotedPlayerId]->alive) {
-												if (!witchPotions[1]) {
-													witchPotions[1] = true;
-													aPlayers[toHealVotedPlayerId]->alive = true;
-													//aPlayers[toKillVotedPlayerId]->currentVotes++;
-												}
-											}
-										}
-										witchVotes[1];
-									}
-
-									//ENVIAR UN END_TURN Y RESULTADOS
-
-
-								}
-								break;
-							}
-						}
-						aEventos.pop();
-						bool allVoted = true;
-
-						switch (currentTurn) {
-						case PlayerServer::Turn::_DAY:
-							//					bool allVoted = true;
-							for (int i = 0; i < numPlayers; i++) {
-								if (aPlayers[i]->alive) {
-									if (!aPlayers[i]->voted) {
-										allVoted = false;
-										break;
 									}
 								}
+								witchVotes[1];
 							}
 
-							if (allVoted) {
-								//EndTurn(DAY)
-								EndTurn(&currentTurn, &aPlayers);
-								ResetVotes(&aPlayers);
-							}
+							//ENVIAR UN END_TURN Y RESULTADOS
 
-
-							break;
-						case PlayerServer::Turn::_WOLVES:
-							for (int i = 0; i < wolves.size(); i++) {
-								if (wolves[i]->alive && !wolves[i]->voted) {
-									allVoted = false;
-									break;
-								}
-							}
-
-							if (allVoted) {
-								EndTurn(&currentTurn, &aPlayers);
-								ResetVotes(&aPlayers);
-							}
-
-							break;
-						case PlayerServer::Turn::_WITCHTURN:
-
-							if (witch[0]!= nullptr) {
-								if (witch[0]->alive) {
-									if (witchVotes[0]&&witchVotes[1]) {
-										EndTurn(&currentTurn, &aPlayers);
-										ResetVotes(&aPlayers);
-
-									}
-								}
-								else {
-										EndTurn(&currentTurn, &aPlayers);
-										ResetVotes(&aPlayers);
-
-								}
-							}
-							break;
-						}
-
-
-
-						bool wins=true;
-						for (int i = 0; i < wolves.size(); i++) {
-							if (wolves[i]->alive)
-								wins = false;
-							break;
-						}
-
-						sf::Packet gameOverPacket;
-						int whoWins = 0;
-
-						if (wins) {
-
-							gameOverPacket << "GAME_OVER_";
-							gameOverPacket << whoWins;
-
-							for (int i = 0; i < aPlayers.size(); i++) {
-								aPlayers[i]->socket->send(gameOverPacket);
-							}
-
-						}else {
-							wins = true;
-							for (int i = 0; aPlayers.size(); i++) {
-								if (aPlayers[i]->role != Player::ROLE::_WOLF&&aPlayers[i]->alive) {
-									wins = false;
-									break;
-								}
-							}
-							if (wins) {
-								whoWins = 1;
-								gameOverPacket << "GAME_OVER_";
-								gameOverPacket << wins;
-							}
 
 						}
-
-
-
-
-
-
-
-
-
-
-
-
-
-						//Fin del While 
+						break;
 					}
 				}
+				aEventos.pop();
+				bool allVoted = true;
 
+				switch (currentTurn) {
+				case PlayerServer::Turn::_DAY:
+					//					bool allVoted = true;
+					for (int i = 0; i < numPlayers; i++) {
+						if (aPlayers[i]->alive) {
+							if (!aPlayers[i]->voted) {
+								allVoted = false;
+								break;
+							}
+						}
+					}
+
+					if (allVoted) {
+						//EndTurn(DAY)
+						EndTurn(&currentTurn, &aPlayers);
+						ResetVotes(&aPlayers);
+					}
+
+
+					break;
+				case PlayerServer::Turn::_WOLVES:
+					for (int i = 0; i < wolves.size(); i++) {
+						if (wolves[i]->alive && !wolves[i]->voted) {
+							allVoted = false;
+							break;
+						}
+					}
+
+					if (allVoted) {
+						EndTurn(&currentTurn, &aPlayers);
+						ResetVotes(&aPlayers);
+					}
+
+					break;
+				case PlayerServer::Turn::_WITCHTURN:
+					if (witch[0]!= nullptr) {
+						if (witch[0]->alive) {
+							if (witchVotes[0]&&witchVotes[1]) {
+								EndTurn(&currentTurn, &aPlayers);
+								ResetVotes(&aPlayers);
+
+							}
+						}
+						else {
+								EndTurn(&currentTurn, &aPlayers);
+								ResetVotes(&aPlayers);
+
+						}
+					}
+					break;
+				}
+
+				bool wins=true;
+				for (int i = 0; i < wolves.size(); i++) {
+					if (wolves[i]->alive)
+						wins = false;
+					break;
+				}
+
+				sf::Packet gameOverPacket;
+				int whoWins = 0;
+
+				if (wins) {
+
+					gameOverPacket << "GAME_OVER_";
+					gameOverPacket << whoWins;
+
+					for (int i = 0; i < aPlayers.size(); i++) {
+						aPlayers[i]->socket->send(gameOverPacket);
+					}
+
+				}else {
+					wins = true;
+					for (int i = 0; aPlayers.size(); i++) {
+						if (aPlayers[i]->role != Player::ROLE::_WOLF&&aPlayers[i]->alive) {
+							wins = false;
+							break;
+						}
+					}
+					if (wins) {
+						whoWins = 1;
+						gameOverPacket << "GAME_OVER_";
+						gameOverPacket << wins;
+					}
+
+				}
+				//Fin del While 
+			}
+		}
 		
 		receptionThread.join();
 		////////////////////////GAMESTART///////////////////////
 		////////////////////////GAMESTART///////////////////////
 		////////////////////////GAMESTART///////////////////////
 		////////////////////////GAMESTART///////////////////////
-
-
-
-
-
 	}
 }

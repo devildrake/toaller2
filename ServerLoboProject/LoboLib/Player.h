@@ -1,6 +1,15 @@
 #pragma once
 #include <iostream>
+#include <mutex>
 #include <SFML\Network.hpp>
+
+std::mutex m;
+void Print(std::string s){
+	m.lock();
+	std::cout << s << std::endl;
+	m.unlock();
+}
+
 class Player {
 public:
 	std::string userName;
