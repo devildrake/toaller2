@@ -33,6 +33,15 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 	}
 }
 
+void ResetVotes(std::vector<PlayerServer*>*aPlayers) {
+
+	for (int i = 0; i < aPlayers->size(); i++) {
+		aPlayers->at(i)->voted = false;
+		aPlayers->at(i)->currentVotes = 0;
+	}
+
+}
+
 void EndTurn(PlayerServer::Turn* turnoACambiar,std::vector<PlayerServer*>* aPlayers) {
 	std::vector<PlayerServer*> deadPlayers;
 	PlayerServer* mostVotedPlayer = aPlayers->at(0);
@@ -206,6 +215,8 @@ void main() {
 						}
 					}
 
+					std::cout << "Se asignan " << wolves.size() << " lobos\n";
+
 					while (witch.size() == 0) {
 						int randomNumber = rand() % numPlayers;
 						if (aPlayers[randomNumber]->role == Player::ROLE::_VILLAGER) {
@@ -222,8 +233,11 @@ void main() {
 						sf::Packet infoPacket;
 						infoPacket << "PLAYERS_";
 						infoPacket << i;
+						int roleInt = (int)aPlayers[i]->role;
+						roleInt = 1;
+						infoPacket << roleInt;
 
-						infoPacket << (int)aPlayers[i]->role;
+						std::cout << "INTEGER " << (int)aPlayers[i]->role << "\n";
 
 						for (int j = 0; j < numPlayers; j++) {
 							infoPacket << aPlayers[j]->GetUserName();
@@ -368,6 +382,7 @@ void main() {
 							if (allVoted) {
 								//EndTurn(DAY)
 								EndTurn(&currentTurn, &aPlayers);
+								ResetVotes(&aPlayers);
 							}
 
 
@@ -382,18 +397,24 @@ void main() {
 
 							if (allVoted) {
 								EndTurn(&currentTurn, &aPlayers);
+								ResetVotes(&aPlayers);
 							}
 
 							break;
 						case PlayerServer::Turn::_WITCHTURN:
+
 							if (witch[0]!= nullptr) {
 								if (witch[0]->alive) {
 									if (witchVotes[0]&&witchVotes[1]) {
 										EndTurn(&currentTurn, &aPlayers);
+										ResetVotes(&aPlayers);
+
 									}
 								}
 								else {
 										EndTurn(&currentTurn, &aPlayers);
+										ResetVotes(&aPlayers);
+
 								}
 							}
 							break;
