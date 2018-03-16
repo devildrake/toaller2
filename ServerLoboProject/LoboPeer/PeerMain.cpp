@@ -155,6 +155,11 @@ int main() {
 						delete socket;
 					}
 				}
+
+				/*
+				 * TENDRIAMOS QUE HACER UN THREAD PARA LOS RECIEVE, PORQUE SI BLOQUEAMOS EN EL RECEIVE Y EN ESE MOMENTO SE INTENTA CONECTAR
+				 * OTRO PEER ESTE NO VA A PODER HACERLO.
+				 */
 				sf::TcpListener listener;
 				status = listener.listen(myPort);
 				if(status == sf::Socket::Done){
