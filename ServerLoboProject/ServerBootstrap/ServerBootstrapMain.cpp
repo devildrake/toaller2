@@ -1,6 +1,7 @@
 #include <SFML\Network.hpp>
 #include <iostream>
 #include <Player.h>
+#define NUMPLAYERS 6
 
 class Direction {
 	std::string ip, name;
@@ -30,12 +31,11 @@ public:
 int main() {
 	sf::TcpListener listener;
 	sf::Socket::Status status;
-	int maxPlayers = 12;
 	std::vector<Direction> aDirections;
 
 	status = listener.listen(50000);
-	if (status = sf::TcpListener::Done) {//SE HA PODIDO VINCULAR BIEN AL PUERTO
-		for (int i = 0; i < maxPlayers; i++) {
+	if (status == sf::TcpListener::Done) {//SE HA PODIDO VINCULAR BIEN AL PUERTO
+		for (int i = 0; i < NUMPLAYERS; i++) {
 			sf::TcpSocket* socket = new sf::TcpSocket();
 			status = listener.accept(*socket);
 			
@@ -54,7 +54,7 @@ int main() {
 						int size = aDirections.size();
 						int playerID = i;
 
-						infoPeers << "INFOS_" << Player::ROLE::_VILLAGER << playerID << size;
+						infoPeers << "INFOS_" << (int)Player::ROLE::_VILLAGER << playerID << size;
 						for (int i = 0; i < size; i++) {
 							infoPeers << aDirections[i].GetIP() << aDirections[i].GetPort() << playerID << username;
 						}
@@ -65,6 +65,7 @@ int main() {
 						else {
 							//se añade la informacion de este peer
 							aDirections.push_back(Direction(socket->getRemoteAddress().toString(), socket->getRemotePort(),username,playerID));
+
 						}
 						socket->disconnect();
 						delete socket;
@@ -76,9 +77,14 @@ int main() {
 				delete socket;
 			}
 		}
+		listener.close();
 	}
+
+
 	else {
 		std::cout << "No se ha podido vincular al puerto" << std::endl;
+		system("pause");
+		listener.close();
 	}
 }
 

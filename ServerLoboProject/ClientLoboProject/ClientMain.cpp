@@ -107,7 +107,11 @@ void main() {
 		nameSendPacket << myUserName;
 
 		mySelf.userName = myUserName;
-		socket->send(nameSendPacket);
+		status = socket->send(nameSendPacket);
+
+		if (status != sf::TcpSocket::Status::Done) {
+			std::cout << "Error de emision\n";
+		}
 
 		//AHORA NO LE LLEGA NUNCA NINGUN EVENTO POR LO VISTO
 		
@@ -181,8 +185,14 @@ void main() {
 				if (code == "PLAYERS_") {
 					int roleId;
 					receptionPacket >> mySelf.id;
+					myId = mySelf.id;
+
+					std::cout << "Receiving id = " << mySelf.id<<"\n";
 
 					receptionPacket >> roleId;
+
+					mySelf.role = (Player::ROLE)roleId;
+
 
 					for (int i = 0; i < 6; i++) {
 						std::string userName;
@@ -196,16 +206,14 @@ void main() {
 
 						aPlayers.push_back(player);
 
-
-						mySelf = aPlayers[id];
-						mySelf.role = (Player::ROLE)roleId;
+						//mySelf = aPlayers[id];
 
 						//delete aNewPlayer;
 						std::cout << "Receiving player with userName " << player.GetUserName() << " and id " << player.id << "\n";
 					}
 					aMensajes.push_back("Welcome to the world of Castronegro's wolf");
 					aMensajes.push_back("The night will start shortly, stay safe");
-
+					aPlayers[mySelf.id] = mySelf;
 					std::cout << "YOUR ROLE IS " << mySelf.GetRoleAsString() << "\n";
 					std::cout << "ROLE: " << mySelf.role << std::endl;
 
@@ -215,15 +223,36 @@ void main() {
 					receptionPacket >> mensaje;
 					aMensajes.push_back(mensaje);
 				}
+				else if (code == "END_TURN_") {
+					//currentTurn
+					aMensajes.clear();
+					switch (currentTurn) {
+					case Player::Turn::_DAY:
+						currentTurn = Player::Turn::_WOLVES;
+						aMensajes.push_back("Se hace de noche, no ha habido consenso");
+						break;
+					case Player::Turn::_WOLVES:
+						aMensajes.push_back("Es el turno de la bruja, los lobos no se han puesto de acuerdo");
+						currentTurn = Player::Turn::_WITCHTURN;
+						break;
+					case Player::Turn::_WITCHTURN:
+						aMensajes.push_back("Se hace de día");
+						currentTurn = Player::Turn::_DAY;
+						break;
+					}
+				}
 				else if (code == "DEATH_") {
 					aMensajes.clear();
 
 					int deadPlayerId;
 					int deadPlayerRole;
+
+					receptionPacket >> deadPlayerId;
+					receptionPacket >> deadPlayerRole;
+
 					switch (currentTurn) {
 					case Player::Turn::_DAY:
-						receptionPacket >> deadPlayerId;
-						receptionPacket >> deadPlayerRole;
+
 						aPlayers[deadPlayerId].role = (Player::ROLE)deadPlayerRole;
 
 						if (deadPlayerId >= 0 && deadPlayerId <= 11) {
@@ -340,35 +369,51 @@ void main() {
 
 							switch (currentTurn) {
 							case Player::Turn::_DAY:
-								if (mySelf.alive) {
+								//if (mySelf.alive) {
 									votePacket << "VOTE_";
 									votePacket << whoToVote;
 									votePacket << mySelf.id;
-									socket->send(votePacket);
-								}
+									status = socket->send(votePacket);
+
+									if (status != sf::TcpSocket::Status::Done) {
+										std::cout << "Error de emision\n";
+									}
+								//}
 								break;
 							case Player::Turn::_WOLVES:
 								if (mySelf.role == Player::ROLE::_WOLF) {
 
 									std::cout << "As a wolf, I summon my right to vote\n";
 
-									if (mySelf.alive) {
+									//if (mySelf.alive) {
 										votePacket << "VOTE_";
 										votePacket << whoToVote;
 										votePacket << mySelf.id;
-										socket->send(votePacket);
+										status = socket->send(votePacket);
+
+
+										if (status != sf::TcpSocket::Status::Done) {
+											std::cout << "Error de emision\n";
+										}
 
 										std::cout << "MY ID is " << mySelf.id << " and I am voting for the player with ID " << whoToVote << "\n";
-									}
+									//}
 								}
 								break;
 							case Player::Turn::_WITCHTURN:
 								if (mySelf.role == Player::ROLE::_WITCH) {
-									if (mySelf.alive) {
+									//if (mySelf.alive) {
 										votePacket << "VOTE_";
+										votePacket << mySelf.id;
 										votePacket << whoToVote;
-										socket->send(votePacket);
-									}
+										status = socket->send(votePacket);
+
+
+										if (status != sf::TcpSocket::Status::Done) {
+											std::cout << "Error de emision\n";
+										}
+
+									//}
 								}
 								break;
 							}
@@ -387,6 +432,7 @@ void main() {
 						sf::Packet packet;
 
 						packet << "MSJ_";
+						packet << mySelf.id;
 						packet << mensajeDefinitivo;
 						if (mensaje == " >/Disconnect") {
 							//Close(aSock, finish);
