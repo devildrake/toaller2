@@ -142,6 +142,9 @@ int main() {
 						if (status != sf::Socket::Done) {
 							std::cout << "No se ha podido mandar la informacion de conexion a otro peer" << std::endl;
 						}
+						else {
+							std::cout << "Informacion al nuevo peer enviada correctamente" << std::endl;
+						}
 					}
 					else if (status == sf::TcpSocket::Socket::Status::Disconnected)  {
 						std::cout << "Intento de conexion fallido (PEER DESCONECTADO)\n";
@@ -158,13 +161,14 @@ int main() {
 					for (int i = aPlayers.size(); i < NUMPLAYERS; i++) {
 						sf::TcpSocket* newSocket = new sf::TcpSocket();
 						status = listener.accept(*newSocket);
-
 						if (status == sf::TcpSocket::Status::Done) {
+							std::cout << "NUEVA CONEXION ENTRANTE" << std::endl;
 							sf::Packet infoPacket;
-							status == newSocket->receive(infoPacket);
+							status = newSocket->receive(infoPacket);
 
 							if (status == sf::Socket::Done) {
-								infoPacket << command;
+								std::cout << "Informacion del nuevo peer recibida correctamente" << std::endl;
+								infoPacket >> command;
 								if (command == "INFOP_") {
 									std::cout << "Receiving new peer info\n";
 									PlayerServer newPlayer;
