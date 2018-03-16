@@ -135,21 +135,26 @@ int main() {
 						player.socket = socket;
 						aPlayers.push_back(player);
 						sf::Packet infoPSend;
+						Print("Conexion establecida con otro peer");
 
 						infoPSend << "INFOP_" << myID << username << myRole;
+						status = socket->send(infoPSend);
+						if (status != sf::Socket::Done) {
+							std::cout << "No se ha podido mandar la informacion de conexion a otro peer" << std::endl;
+						}
 					}
 					else if (status == sf::TcpSocket::Socket::Status::Disconnected)  {
 						std::cout << "Intento de conexion fallido (PEER DESCONECTADO)\n";
 						delete socket;
 					}
 					else if (status == sf::TcpSocket::Socket::Status::Error) {
-						std::cout << "Intento de conexion fallido (ERROR RANDOM)\n";
+						std::cout << "Intento de conexion a otro peer fallido (ERROR RANDOM)\n";
 						delete socket;
 					}
 				}
-				if (aPlayers.size() < NUMPLAYERS) {
-					sf::TcpListener listener;
-					listener.listen(myPort);
+				sf::TcpListener listener;
+				status = listener.listen(myPort);
+				if(status == sf::Socket::Done){
 					for (int i = aPlayers.size(); i < NUMPLAYERS; i++) {
 						sf::TcpSocket* newSocket = new sf::TcpSocket();
 						status = listener.accept(*newSocket);
@@ -184,14 +189,15 @@ int main() {
 
 						}
 						else {
+							std::cout << "No se ha podido aceptar la nueva conexion" << std::endl;
 							delete newSocket;
 						}
-
-
-
 					}
-					listener.close();
 				}
+				else { //el peer no se ha podido vincular al puerto para aceptar nuevas conexiones
+					std::cout << "El peer no se ha podido vincular al puerto" << std::endl;
+				}
+				listener.close();
 				////////////////////CONEXION ESTABLECIDA///////////////////////////////
 				////////////////////CONEXION ESTABLECIDA///////////////////////////////
 				////////////////////CONEXION ESTABLECIDA///////////////////////////////

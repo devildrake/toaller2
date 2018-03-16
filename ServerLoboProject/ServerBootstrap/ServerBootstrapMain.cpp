@@ -35,6 +35,7 @@ int main() {
 
 	status = listener.listen(50000);
 	if (status == sf::TcpListener::Done) {//SE HA PODIDO VINCULAR BIEN AL PUERTO
+		Print("Esperando conexiones...");
 		for (int i = 0; i < NUMPLAYERS; i++) {
 			sf::TcpSocket* socket = new sf::TcpSocket();
 			status = listener.accept(*socket);
@@ -53,6 +54,7 @@ int main() {
 
 						int size = aDirections.size();
 						int playerID = i;
+						std::cout << "Sending info to peer (" << size << " peers)" << std::endl;
 
 						infoPeers << "INFOS_" << (int)Player::ROLE::_VILLAGER << playerID << size;
 						for (int i = 0; i < size; i++) {
@@ -77,6 +79,7 @@ int main() {
 				delete socket;
 			}
 		}
+		Print("Cerrando listener");
 		listener.close();
 	}
 
