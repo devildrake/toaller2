@@ -6,12 +6,15 @@
 class Direction {
 	std::string ip, name;
 	int port, id;
+	Player::ROLE role;// = Player::ROLE::_VILLAGER;
+
 public:
 	Direction(std::string ip, int port, std::string username, int id) {
 		this->ip = ip;
 		this->port = port;
 		name = username;
 		this->id = id;
+		role = Player::ROLE::_VILLAGER;
 	}
 
 	std::string GetIP() {
@@ -26,13 +29,21 @@ public:
 	int GetID() {
 		return id;
 	}
+	Player::ROLE GetRole() {
+		return role;
+	}
+
+	void SetRole(Player::ROLE aRole) {
+		role = aRole;
+	}
+
 };
 
 int main() {
 	sf::TcpListener listener;
 	sf::Socket::Status status;
 	std::vector<Direction> aDirections;
-
+	int wolves = 0;
 	status = listener.listen(50000);
 	if (status == sf::TcpListener::Done) {//SE HA PODIDO VINCULAR BIEN AL PUERTO
 		Print("Esperando conexiones...");
@@ -55,10 +66,35 @@ int main() {
 						int size = aDirections.size();
 						int playerID = i;
 						std::cout << "Sending info to peer (" << size << " peers)" << std::endl;
+						
+						infoPeers << "INFOS_";
 
-						infoPeers << "INFOS_" << (int)Player::ROLE::_VILLAGER << playerID << size;
-						for (int i = 0; i < size; i++) {
-							infoPeers << aDirections[i].GetIP() << aDirections[i].GetPort() << playerID << username;
+						Direction direction(socket->getRemoteAddress().toString(), socket->getRemotePort(), username, playerID);
+
+
+						if (wolves < 3) {
+							infoPeers << (int)Player::ROLE::_WOLF;
+							direction.SetRole(Player::ROLE::_WOLF);
+
+							wolves++;
+
+						}
+						else {
+							infoPeers << (int)Player::ROLE::_VILLAGER;
+							direction.SetRole(Player::ROLE::_VILLAGER);
+
+						}
+
+						infoPeers << playerID << size;
+
+						for (int j = 0; j< size; j++) {
+							infoPeers << aDirections[j].GetIP();
+							infoPeers << aDirections[j].GetPort();
+							infoPeers << aDirections[j].GetID();
+							infoPeers << aDirections[j].GetName();
+							infoPeers << (int)aDirections[j].GetRole();
+							std::cout << "Name going inside packet--->" << aDirections[j].GetName() << std::endl;
+
 						}
 						status = socket->send(infoPeers); //se envia la informacion de todos los peers que se habian conectado antes
 						if (status != sf::Socket::Done) {
@@ -66,7 +102,7 @@ int main() {
 						}
 						else {
 							//se añade la informacion de este peer
-							aDirections.push_back(Direction(socket->getRemoteAddress().toString(), socket->getRemotePort(),username,playerID));
+							aDirections.push_back(direction);
 
 						}
 						socket->disconnect();
