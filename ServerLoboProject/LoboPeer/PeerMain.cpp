@@ -87,7 +87,9 @@ void socketSelectorMethod(std::vector<PlayerServer>*aPlayers, std::queue<sf::Pac
 						std::cout << "Receiving DISCONNECT\n";
 						ss.remove(*aPlayers->at(i).socket);
 						aPlayers->at(i).socket->disconnect();
-						aPlayers->erase(aPlayers->begin() + i);
+						aPlayers->at(i).socket = nullptr;
+						aPlayers->at(i).alive = false;
+						//aPlayers->erase(aPlayers->begin() + i);
 					}
 					else if (status == sf::TcpSocket::Status::Error) {
 						std::cout << "Receiving ERROR\n";
