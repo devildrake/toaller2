@@ -1,6 +1,7 @@
 #include <Player.h>
 #include <SFML\Network.hpp>
 #include <SFML\Graphics.hpp>
+#include <SFML\System\Vector2.hpp>
 #include <thread>
 #include <chrono>
 #include <queue>
@@ -53,6 +54,23 @@ void eventMethod(sf::TcpSocket* maSocket,std::queue<sf::Packet>* aEventos) {
 }
 
 void main() {
+	sf::Texture wolfTex, villagerTex, dayTex, nightTex;
+	sf::Sprite roleSprite, daySprite;
+	if (!wolfTex.loadFromFile("lobo.png")) {
+		std::cout << "No se ha podido cargar la textura de lobo" << std::endl;
+	}
+	if (!villagerTex.loadFromFile("pueblo.png")) {
+		std::cout << "No se ha podido cargar la textura de pueblo" << std::endl;
+	}
+	if (!dayTex.loadFromFile("sun.png")) {
+		std::cout << "No se ha podido cargar la textura de dia" << std::endl;
+	}
+	if (!nightTex.loadFromFile("moon.png")) {
+		std::cout << "No se ha podido cargar la textura de noche" << std::endl;
+	}
+
+	sf::Vector2u windowSize;
+
 	std::queue<sf::Packet>aEvents;
 	srand(time(NULL));
 	Player::Turn currentTurn;
@@ -140,7 +158,8 @@ void main() {
 
 		//LOOP DEL CHAT
 		while (window.isOpen()) {
-		
+			windowSize = window.getSize();
+
 			if (aEvents.size() > 0) {
 				sf::Packet packet = aEvents.front();
 				std::string code;
@@ -196,6 +215,7 @@ void main() {
 					int turnId;
 					packet >> turnId;
 					currentTurn = (Player::Turn)turnId;
+					std::cout << "TURNO RECIBIDO--> " << turnId << std::endl;
 					std::string unMensaje;
 					packet >> unMensaje;
 					aMensajes.push_back(unMensaje);
@@ -309,6 +329,7 @@ void main() {
 
 			window.draw(separator);
 			window.draw(separator2);
+			
 			for (size_t i = 0; i < aMensajes.size(); i++) {
 				std::string chatting = aMensajes[i];
 				chattingText.setPosition(sf::Vector2f(0, 20 * i));
@@ -371,6 +392,42 @@ void main() {
 			std::string mensaje_ = mensaje + "_";
 			text.setString(mensaje_);
 			window.draw(text);
+
+			/////////////////////////////////PARTE GRAFICA
+			/////////////////////////////////PARTE GRAFICA
+			/////////////////////////////////PARTE GRAFICA
+			/////////////////////////////////PARTE GRAFICA
+			if (myRole == Player::ROLE::_WOLF) {
+				roleSprite.setTexture(wolfTex);
+				roleSprite.setPosition(windowSize.x - 70, windowSize.y -120);
+				window.draw(roleSprite);
+
+				if (currentTurn == Player::Turn::_DAY) {
+					daySprite.setTexture(dayTex);
+					daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+					window.draw(daySprite);
+				}
+				else {
+					daySprite.setTexture(nightTex);
+					daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+					window.draw(daySprite);
+				}
+			}
+			else if (myRole == Player::ROLE::_VILLAGER) {
+				roleSprite.setTexture(villagerTex);
+				roleSprite.setPosition(windowSize.x - 70, windowSize.y - 120);
+				window.draw(roleSprite);
+				if (currentTurn == Player::Turn::_DAY) {
+					daySprite.setTexture(dayTex);
+					daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+					window.draw(daySprite);
+				}
+				else {
+					daySprite.setTexture(nightTex);
+					daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+					window.draw(daySprite);
+				}
+			}
 
 			window.display();
 			window.clear();

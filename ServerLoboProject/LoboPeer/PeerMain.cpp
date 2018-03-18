@@ -2,6 +2,7 @@
 #include <string>
 #include <SFML\Network.hpp>
 #include <SFML\Graphics.hpp>
+#include <SFML\System\Vector2.hpp>
 #include <Player.h>
 #include <queue>
 #include <thread>
@@ -166,6 +167,23 @@ void KillMostVotedPlayer(std::vector<PlayerServer>*aPlayers,Player::Turn* turnTo
 }
 
 int main() {
+	sf::Texture wolfTex, villagerTex, dayTex, nightTex;
+	sf::Sprite roleSprite, daySprite;
+	if (!wolfTex.loadFromFile("lobo.png")) {
+		std::cout << "No se ha podido cargar la textura de lobo" << std::endl;
+	}
+	if (!villagerTex.loadFromFile("pueblo.png")) {
+		std::cout << "No se ha podido cargar la textura de pueblo" << std::endl;
+	}
+	if (!dayTex.loadFromFile("sun.png")) {
+		std::cout << "No se ha podido cargar la textura de dia" << std::endl;
+	}
+	if (!nightTex.loadFromFile("moon.png")) {
+		std::cout << "No se ha podido cargar la textura de noche" << std::endl;
+	}
+
+	sf::Vector2u windowSize;
+
 	Player::Turn currentTurn = Player::Turn::_DAY;
 	Player::ROLE myRole;
 	int myPort;
@@ -396,6 +414,7 @@ int main() {
 				
 				//LOOP DEL CHAT
 				while (window.isOpen()) {
+					windowSize = window.getSize();
 
 					if (thereWasAVote) {
 						bool allVoted = true;
@@ -781,6 +800,42 @@ int main() {
 					std::string mensaje_ = mensaje + "_";
 					text.setString(mensaje_);
 					window.draw(text);
+
+					/////////////////////////////////PARTE GRAFICA
+					/////////////////////////////////PARTE GRAFICA
+					/////////////////////////////////PARTE GRAFICA
+					/////////////////////////////////PARTE GRAFICA
+					if (myRole == Player::ROLE::_WOLF) {
+						roleSprite.setTexture(wolfTex);
+						roleSprite.setPosition(windowSize.x - 70, windowSize.y - 120);
+						window.draw(roleSprite);
+
+						if (currentTurn == Player::Turn::_DAY) {
+							daySprite.setTexture(dayTex);
+							daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+							window.draw(daySprite);
+						}
+						else {
+							daySprite.setTexture(nightTex);
+							daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+							window.draw(daySprite);
+						}
+					}
+					else if (myRole == Player::ROLE::_VILLAGER) {
+						roleSprite.setTexture(villagerTex);
+						roleSprite.setPosition(windowSize.x - 70, windowSize.y - 120);
+						window.draw(roleSprite);
+						if (currentTurn == Player::Turn::_DAY) {
+							daySprite.setTexture(dayTex);
+							daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+							window.draw(daySprite);
+						}
+						else {
+							daySprite.setTexture(nightTex);
+							daySprite.setPosition(windowSize.x - 180, windowSize.y - 320);
+							window.draw(daySprite);
+						}
+					}
 
 					window.display();
 					window.clear();
