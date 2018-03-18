@@ -174,7 +174,7 @@ void main() {
 					aMensajes.push_back("Es de dia en Castronegro");
 					aPlayers[myId].role = myRole;
 				}
-				else if (code == "MSJ_") {
+				else if (code == "SMSJ_") {
 					std::string mensaje;
 					packet >> mensaje;
 					aMensajes.push_back(mensaje);
@@ -274,7 +274,7 @@ void main() {
 							mensajeDefinitivo += "-" + mensaje;
 							sf::Packet packet;
 
-							packet << "MSJ_";
+							packet << "CMSJ_";
 							//packet << mySelf->id;
 							packet << mensajeDefinitivo;
 							packet << myId;

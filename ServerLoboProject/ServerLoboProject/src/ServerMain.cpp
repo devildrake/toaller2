@@ -32,7 +32,7 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 
 					sf::Packet forcedPacket;
 
-					forcedPacket << "DISCONNECT_";
+					forcedPacket << "ALERTDISCONNECT_";
 					forcedPacket << i;
 
 					aEventos->push(forcedPacket);
@@ -48,11 +48,11 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 		}
 	}
 }
-
-//void SendPacketToClient(sf::Packet* packet,sf::TcpSocket* playerSocket) {
+//
+//void SendPacketToClient(sf::Packet packet,PlayerServer* player) {
 //	sf::Socket::Status status;
 //
-//	status = playerSocket->send(*packet);
+//	status = player->socket->send(packet);
 //
 //	if (status == sf::Socket::Done) {
 //		std::cout << "Packet enviado correctamente\n";
@@ -291,7 +291,7 @@ void main() {
 					sf::Packet remainingPlayersPacket;
 					int numberOfRemainingPlayers = NUM_PLAYERS - aPlayers.size();
 
-					remainingPlayersPacket << "MSJ_";
+					remainingPlayersPacket << "SMSJ_";
 					std::string mensaje = "Esperando a ";
 					mensaje += std::to_string(numberOfRemainingPlayers);
 					mensaje += " jugadores\n";
@@ -415,7 +415,7 @@ void main() {
 
 				packet >> code;
 
-				if (code == "MSJ_") {
+				if (code == "CMSJ_") {
 					std::string mensaje;
 					sf::Packet reSendPacket;
 					int senderId;
@@ -424,7 +424,7 @@ void main() {
 					if (aPlayers[senderId]->alive) {
 						switch (currentTurn) {
 						case Player::Turn::_DAY:
-							reSendPacket << "MSJ_";
+							reSendPacket << "SMSJ_";
 							reSendPacket << mensaje;
 
 							for (int i = 0; i < aPlayers.size(); i++) {
@@ -441,7 +441,7 @@ void main() {
 							break;
 						case Player::Turn::_WOLVES:
 							if (aPlayers[senderId]->role == Player::ROLE::_WOLF) {
-								reSendPacket << "MSJ_";
+								reSendPacket << "SMSJ_";
 								reSendPacket << mensaje;
 
 								for (int i = 0; i < wolves.size(); i++) {
@@ -458,7 +458,7 @@ void main() {
 
 							}
 							else {
-								reSendPacket << "MSJ_";
+								reSendPacket << "SMSJ_";
 								reSendPacket << "Solo los lobos pueden hablar de noche";
 
 									if (aPlayers[senderId]->socket != nullptr) {
@@ -482,7 +482,7 @@ void main() {
 						}
 					}
 					else {
-						reSendPacket << "MSJ_";
+						reSendPacket << "SMSJ_";
 						reSendPacket << "Los muertos no hablan";
 						if (aPlayers[senderId]->socket != nullptr) {
 							status = aPlayers[senderId]->socket->send(reSendPacket);
@@ -507,7 +507,7 @@ void main() {
 					///////////////////////AQUI HAY PROBLEM/////////////////////////////
 					bool allVoted = true;
 					sf::Packet respuestaPacket;
-					respuestaPacket << "MSJ_";
+					respuestaPacket << "SMSJ_";
 
 					int votingPlayerId;
 					int votedPlayerId;
@@ -646,7 +646,7 @@ void main() {
 
 
 				}
-				else if (code == "DISCONNECT_") {
+				else if (code == "ALERTDISCONNECT_") {
 					int disconnectedId;
 					packet >> disconnectedId;
 					sf::Packet disconnectMessagePacket;

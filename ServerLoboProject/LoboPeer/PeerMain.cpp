@@ -281,7 +281,7 @@ int main() {
 				if(status == sf::Socket::Done){
 					for (int i = aPlayers.size(); i < NUMPLAYERS; i++) {
 						sf::TcpSocket* newSocket = new sf::TcpSocket();
-						status = listener.accept(*newSocket);
+						status = listener.accept(*newSocket);	
 						if (status == sf::TcpSocket::Status::Done) {
 							std::cout << "NUEVA CONEXION ENTRANTE" << std::endl;
 							sf::Packet infoPacket;
@@ -547,12 +547,6 @@ int main() {
 
 							std::cout << "Player with id " << votingPlayer << " wanted to vote for player with id " << votedPlayer << "\n";*/
 
-
-						}
-						else if (command == "REVEAL_") {
-
-						}
-						else if (command == "REVIVE") {
 
 						}
 
