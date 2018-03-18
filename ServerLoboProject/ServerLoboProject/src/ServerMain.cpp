@@ -82,7 +82,7 @@ void EndTurn(Player::Turn* turn, std::vector<PlayerServer*>* aPlayers) {
 
 	endTurnPacket << "ENDTURN_";
 
-	endTurnPacket << (int)turn;
+	endTurnPacket << (int)*turn;
 
 	if (*turn == Player::Turn::_DAY) {
 		endTurnPacket << "Se hace de dia en CastroNegro";
@@ -131,7 +131,10 @@ void ResetVotes(std::vector<PlayerServer*>*aPlayers) {
 void ProcessVotes(std::vector<PlayerServer*>* aPlayer) {
 	sf::Packet endTurnPacket;
 	sf::Socket::Status status;
-
+	//READ THIS SHIT 
+	//estaba trabajando aqui y estaba a punto de gestionar quien es el mas votado y quizas establecer un metodo de cambio de turno
+	//quizas es lo suyo mandar un packet PARA EL CAMBIO DE TURNO Y UNO PARA LAS MUERTES EL METODO SENDPACKETTOCLIENT ESTA ARRIBA DE RESETVOTES 
+	//PERO DABA PROBLEMAS ASI QUE HE HECHO COPYPAST DEL CODIGO DEL METODO Y LO HE METIDO DONDE HAY ENVÍOS DE PACKETS
 	int mostVotedID = 0;
 	bool draw = false;
 
