@@ -29,9 +29,10 @@ int ComprovarBotonPulsado(int _x, int _y,std::vector<sf::Vector2f>botones){
 	return idPulsado;
 }
 
-void eventMethod(sf::TcpSocket* maSocket,std::queue<sf::Packet>* aEventos,bool* end) {
+void eventMethod(sf::TcpSocket* maSocket,std::queue<sf::Packet>* aEventos) {
 	Print("Lanzado thread de recepcion");	
-	while (!*end) {
+	bool disconnected=false;
+	while (!disconnected) {
 		sf::TcpSocket::Status status;
 		sf::Packet local;
 		Print("Preparado para recibir");
@@ -42,6 +43,7 @@ void eventMethod(sf::TcpSocket* maSocket,std::queue<sf::Packet>* aEventos,bool* 
 		}
 		else if (status == sf::TcpSocket::Status::Disconnected) {
 			std::cout << "Receiving DISCONNECT\n";
+			disconnected = true;
 			maSocket->disconnect();
 		}
 		else if (status == sf::TcpSocket::Status::Error) {
@@ -57,10 +59,11 @@ void main() {
 	currentTurn = Player::Turn::_DAY;
 	std::string myUserName = "";
 	int myId;
+	Player::ROLE myRole;
 
 	std::cout << "Enter your username: \n";
 	//std::cin >> myUserName;
-	myUserName = ((char)((rand()%57)+65));
+	myUserName = ((char)((rand() % 57) + 65));
 	bool end = false;
 	int whoToVote;
 
@@ -70,13 +73,12 @@ void main() {
 	sf::TcpSocket* socket = new sf::TcpSocket();
 	sf::Socket::Status status;
 	std::vector<Player>aPlayers;
-	Player mySelf;
 
 	for (size_t i = 0; i < NUM_PLAYERS; i++) {
 		sf::Vector2f boton;
 		boton.x = 555;
 		if (i > 0) {
-			boton.y = LADO_CASILLA * i+5*i;
+			boton.y = LADO_CASILLA * i + 5 * i;
 		}
 		else {
 			boton.y = LADO_CASILLA * i;
@@ -87,42 +89,15 @@ void main() {
 		//window.draw(chattingText);
 	}
 
-	status = socket->connect(sf::IpAddress::getLocalAddress(),50000);
-	
-	if (status == sf::TcpSocket::Done) {
-		std::thread eventThread(&eventMethod, socket, &aEvents, &end);
+	status = socket->connect(sf::IpAddress::getLocalAddress(), 50000);
 
-		//Lanzamos el thread con el socket selector para recibir los mensajes.
-		//std::thread receiveThread(&receiveMethod, socket, &aMensajes, &mySelf, &aPlayers, &end,&currentTurn,&mySelf.role,&mySelf.id);
-		//std::thread eventThread(&EmptyMethod,socket);
-		
-
-		Print("CONNECTED\n");
+	if (status == sf::Socket::Done) {
+		sf::Packet namePacket;
+		namePacket << myUserName;
+		status = socket->send(namePacket);
 
 
-
-		sf::Packet nameSendPacket;
-
-		nameSendPacket << "NAME_";
-		nameSendPacket << myUserName;
-
-		mySelf.userName = myUserName;
-		status = socket->send(nameSendPacket);
-
-		if (status != sf::TcpSocket::Status::Done) {
-			std::cout << "Error de emision\n";
-		}
-
-		//AHORA NO LE LLEGA NUNCA NINGUN EVENTO POR LO VISTO
-		
-
-
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-
+		std::cout << "Conexion establecida\n";
 
 		sf::Vector2i screenDimensions(800, 600);
 
@@ -134,6 +109,11 @@ void main() {
 		{
 			std::cout << "Can't load the font file" << std::endl;
 		}
+
+
+		//void eventMethod(sf::TcpSocket* maSocket, std::queue<sf::Packet>* aEventos) {
+
+		std::thread receptionThread(&eventMethod, socket, &aEvents);
 
 		mensaje = " >";
 
@@ -156,197 +136,83 @@ void main() {
 		separator2.setPosition(550, 0);
 
 
+
+
 		//LOOP DEL CHAT
 		while (window.isOpen()) {
-
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
+		
 			if (aEvents.size() > 0) {
-
-
-				sf::Packet receptionPacket;
+				sf::Packet packet = aEvents.front();
 				std::string code;
-
-				//sf::TcpSocket::Status status;
-				//receptionPacket = aEvents.front();
-
-				receptionPacket = aEvents.front();
-
-				receptionPacket >> code;
+				packet >> code;
 
 				if (code == "PLAYERS_") {
+					aMensajes.clear();
+					packet >> myId;
+					int playerSize;
 					int roleId;
-					receptionPacket >> mySelf.id;
-					myId = mySelf.id;
+					packet >> playerSize;
 
-					std::cout << "Receiving id = " << mySelf.id<<"\n";
+					packet >> roleId;
+					myRole = (Player::ROLE)roleId;
 
-					receptionPacket >> roleId;
+					for (int j = 0; j < playerSize; j++) {
 
-					mySelf.role = (Player::ROLE)roleId;
+						Player player;
+						int roleId;
 
+						packet >> player.userName;
+						packet >> player.id;
+						packet >> roleId;
 
-					for (int i = 0; i < 6; i++) {
-						std::string userName;
-						int id;
-
-						receptionPacket >> userName;
-						receptionPacket >> id;
-
-
-						Player player(userName, id);
-
+						if (myRole == Player::ROLE::_WOLF&&(Player::ROLE)roleId==Player::ROLE::_WOLF) {
+							player.role = (Player::ROLE)roleId;
+						}
+						//aMensajes.push_back("SERVIDOR: Entra " + player.userName);
 						aPlayers.push_back(player);
-
-						//mySelf = aPlayers[id];
-
-						//delete aNewPlayer;
-						std::cout << "Receiving player with userName " << player.GetUserName() << " and id " << player.id << "\n";
 					}
-					aMensajes.push_back("Welcome to the world of Castronegro's wolf");
-					aMensajes.push_back("The night will start shortly, stay safe");
-					aPlayers[mySelf.id] = mySelf;
-					std::cout << "YOUR ROLE IS " << mySelf.GetRoleAsString() << "\n";
-					std::cout << "ROLE: " << mySelf.role << std::endl;
-
+					aMensajes.push_back("Es de dia en Castronegro");
+					aPlayers[myId].role = myRole;
 				}
 				else if (code == "MSJ_") {
 					std::string mensaje;
-					receptionPacket >> mensaje;
+					packet >> mensaje;
 					aMensajes.push_back(mensaje);
 				}
-				else if (code == "END_TURN_") {
-					//currentTurn
-					aMensajes.clear();
-					switch (currentTurn) {
-					case Player::Turn::_DAY:
-						currentTurn = Player::Turn::_WOLVES;
-						aMensajes.push_back("Se hace de noche, no ha habido consenso");
-						break;
-					case Player::Turn::_WOLVES:
-						aMensajes.push_back("Es el turno de la bruja, los lobos no se han puesto de acuerdo");
-						currentTurn = Player::Turn::_WITCHTURN;
-						break;
-					case Player::Turn::_WITCHTURN:
-						aMensajes.push_back("Se hace de día");
-						currentTurn = Player::Turn::_DAY;
-						break;
+				else if (code == "DEAD_") {
+					for (int i = 0; i < aPlayers.size(); i++) {
+						packet >> aPlayers[i].alive;
+
+						if (aPlayers[i].alive == false) {
+							int roleId;
+							packet >> roleId;
+							aPlayers[i].role = (Player::ROLE)roleId;
+						}
+
 					}
 				}
-				else if (code == "DEATH_") {
+				else if (code == "ENDTURN_") {
 					aMensajes.clear();
-
-					int deadPlayerId;
-					int deadPlayerRole;
-
-					receptionPacket >> deadPlayerId;
-					receptionPacket >> deadPlayerRole;
-
-					switch (currentTurn) {
-					case Player::Turn::_DAY:
-
-						aPlayers[deadPlayerId].role = (Player::ROLE)deadPlayerRole;
-
-						if (deadPlayerId >= 0 && deadPlayerId <= 11) {
-							if (mySelf.id == deadPlayerId) {
-								aMensajes.push_back("Has muerto");
-
-								mySelf.alive = false;
-							}
-							else {
-								aMensajes.push_back("Ha muerto " + aPlayers[deadPlayerId].userName + ", su rol era " + aPlayers[deadPlayerId].GetRoleAsString());
-
-								for (int i = 0; i < NUM_PLAYERS; i++) {
-									if (aPlayers[i].id == deadPlayerId) {
-										aPlayers[i].alive = false;
-										aPlayers[i].wasAlive = false;
-									}
-								}
-							}
-						}
-						currentTurn = Player::Turn::_WOLVES;
-						aMensajes.push_back("Se hace de noche en Castronegro");
-						if (mySelf.role == Player::ROLE::_WOLF) {
-							aMensajes.push_back("Debes ponerte de acuerdo con tus hermanos lobos");
-						}
-
-						break;
-					case Player::Turn::_WOLVES:
-						if (mySelf.role == Player::ROLE::_WITCH) {
-							if (mySelf.id == deadPlayerId) {
-								mySelf.alive = false;
-							}
-							else {
-								for (int i = 0; i < NUM_PLAYERS; i++) {
-									if (aPlayers[i].id == deadPlayerId) {
-										aPlayers[i].alive = false;
-									}
-								}
-							}
-						}
-						currentTurn = Player::Turn::_WITCHTURN;
-						aMensajes.push_back("Es el turno de la bruja");
-						if (mySelf.role == Player::ROLE::_WITCH) {
-							aMensajes.push_back("Debes votar aquien quieres matar");
-							aMensajes.push_back("y votar a quien quieras revivir");
-
-						}
-						break;
-					case Player::Turn::_WITCHTURN:
-						receptionPacket >> deadPlayerId;
-
-						if (mySelf.id == deadPlayerId) {
-							mySelf.alive = false;
-						}
-						else {
-							for (int i = 0; i < NUM_PLAYERS; i++) {
-								if (aPlayers.at(i).id == deadPlayerId) {
-									aPlayers.at(i).alive = false;
-									aPlayers.at(i).wasAlive = false;
-								}
-							}
-						}
-						currentTurn = Player::Turn::_DAY;
-						aMensajes.push_back("Se hace de dia en Castronegro");
-
-						break;
-					}
-
+					int turnId;
+					packet >> turnId;
+					currentTurn = (Player::Turn)turnId;
+					std::string unMensaje;
+					packet >> unMensaje;
+					aMensajes.push_back(unMensaje);
 				}
-				else if (code == "GAME_OVER_") {
-					int whoWins;
-
-					receptionPacket >> whoWins;
-
-					if (whoWins == 0) {
-						aMensajes.push_back("Todos los lobos han muerto, ganan los pueblos!");
-					}
-					else {
-						aMensajes.push_back("Han muerto todos los pueblerinos, ganan los lobos!");
-					}
-
-
-
+				else if (code == "GAMEOVER_") {
+					packet >> mensaje;
+					aMensajes.clear();
+					aMensajes.push_back(mensaje);
 					end = true;
 				}
 
-				aEvents.pop();
 
+
+
+				aEvents.pop();
 			}
 
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
-			////////////////////////////////GESTION DE PACKETS///////////////////////
 
 
 			sf::Event evento;
@@ -357,67 +223,30 @@ void main() {
 					window.close();
 					break;
 				case sf::Event::MouseButtonPressed:
-					if (evento.mouseButton.button == sf::Mouse::Left&&mySelf.alive) {
+					if (evento.mouseButton.button == sf::Mouse::Left) {
 						int x = evento.mouseButton.x;
 						int y = evento.mouseButton.y;
 
 						whoToVote = ComprovarBotonPulsado(x, y, botones);
-
-						if (whoToVote >= 0) {
-
+						if (whoToVote != -1) {
 							sf::Packet votePacket;
+							votePacket << "VOTE_";
+							votePacket << myId;
+							votePacket << whoToVote;
 
-							switch (currentTurn) {
-							case Player::Turn::_DAY:
-								//if (mySelf.alive) {
-									votePacket << "VOTE_";
-									votePacket << whoToVote;
-									votePacket << mySelf.id;
-									status = socket->send(votePacket);
+							status = socket->send(votePacket);
 
-									if (status != sf::TcpSocket::Status::Done) {
-										std::cout << "Error de emision\n";
-									}
-								//}
-								break;
-							case Player::Turn::_WOLVES:
-								if (mySelf.role == Player::ROLE::_WOLF) {
-
-									std::cout << "As a wolf, I summon my right to vote\n";
-
-									//if (mySelf.alive) {
-										votePacket << "VOTE_";
-										votePacket << whoToVote;
-										votePacket << mySelf.id;
-										status = socket->send(votePacket);
-
-
-										if (status != sf::TcpSocket::Status::Done) {
-											std::cout << "Error de emision\n";
-										}
-
-										std::cout << "MY ID is " << mySelf.id << " and I am voting for the player with ID " << whoToVote << "\n";
-									//}
-								}
-								break;
-							case Player::Turn::_WITCHTURN:
-								if (mySelf.role == Player::ROLE::_WITCH) {
-									//if (mySelf.alive) {
-										votePacket << "VOTE_";
-										votePacket << mySelf.id;
-										votePacket << whoToVote;
-										status = socket->send(votePacket);
-
-
-										if (status != sf::TcpSocket::Status::Done) {
-											std::cout << "Error de emision\n";
-										}
-
-									//}
-								}
-								break;
+							if (status == sf::Socket::Done) {
+								std::cout << "Voto enviado\n";
+							}
+							else if (status == sf::Socket::Disconnected) {
+								aMensajes.push_back("Desconexion del servidor\n");
+							}
+							else if (status == sf::Socket::Error) {
+								aMensajes.push_back("Error enviando el voto\n");
 							}
 						}
+
 					}
 					break;
 				case sf::Event::KeyPressed:
@@ -427,32 +256,30 @@ void main() {
 						window.close();
 					}
 					else if (evento.key.code == sf::Keyboard::Return) {
-						std::string mensajeDefinitivo = myUserName;
-						mensajeDefinitivo += "-" + mensaje;
-						sf::Packet packet;
+						std::string mensajeDefinitivo = aPlayers[myId].userName;
+							mensajeDefinitivo += "-" + mensaje;
+							sf::Packet packet;
 
-						packet << "MSJ_";
-						packet << mySelf.id;
-						packet << mensajeDefinitivo;
-						if (mensaje == " >/Disconnect") {
-							//Close(aSock, finish);
-							socket->disconnect();
-							window.close();
-						}
-						//Envio del mensaje
+							packet << "MSJ_";
+							//packet << mySelf->id;
+							packet << mensajeDefinitivo;
+							packet << myId;
 
-						std::cout << "Trying to send " << mensajeDefinitivo << std::endl;
+							status == socket->send(packet);
 
-						status = socket->send(packet);
-						if (status != sf::Socket::Done) {
-							std::cout << "No se pudo mandar el mensaje\n";
-						}
-						else {
-							std::cout << "Sending " << mensajeDefinitivo << std::endl;
-						}
+							if (status == sf::Socket::Disconnected) {
+								std::cout << "Server desconectado\n";
+								end = true;
+								socket->disconnect();
+								delete socket;
 
-						//pushToAMsj(&aMensajes, mensajeDefinitivo);
+							}
+							else if (status == sf::Socket::Error) {
+								std::cout << "Error de envío de mensaje\n";
+							}
+						
 						mensaje = " >";
+
 					}
 					break;
 				case sf::Event::TextEntered:
@@ -466,7 +293,6 @@ void main() {
 				}
 			}
 
-			//std::cout << mySelf.role << "\n
 			window.draw(separator);
 			window.draw(separator2);
 			for (size_t i = 0; i < aMensajes.size(); i++) {
@@ -478,35 +304,56 @@ void main() {
 
 			for (size_t i = 0; i < aPlayers.size(); i++) {
 				//			std::string chatting = i + "-> " + aUserNames[i];
-				std::string chatting = std::to_string(i) + "-> " + aPlayers.at(i).userName + " (" +aPlayers.at(i).GetRoleAsString()[0] + ")";
-				chattingText.setPosition(sf::Vector2f(590, 20 * i +10*i));
+				std::string role;
+
+				if (!aPlayers[i].alive) {
+					role = aPlayers.at(i).GetRoleAsString();
+				}
+				else if (aPlayers[i].id != myId) {
+					role = "?";
+				}
+				else {
+					role = aPlayers.at(i).GetRoleAsString();
+				}
+
+				if (myRole == Player::ROLE::_WOLF) {
+					if (aPlayers[i].role == Player::ROLE::_WOLF) {
+						role = "W";
+					}
+				}
+
+
+
+
+				std::string chatting = std::to_string(aPlayers[i].id) + "-> " + aPlayers[i].userName + " (" + role + ")";
+				chattingText.setPosition(sf::Vector2f(590, 20 * i + 10 * i));
 				chattingText.setString(chatting);
 				window.draw(chattingText);
 			}
 
-				for (int j = 0; j<aPlayers.size(); j++){
-					sf::RectangleShape rectBlanco(sf::Vector2f(LADO_CASILLA, LADO_CASILLA));
+			for (int j = 0; j<aPlayers.size(); j++) {
+				sf::RectangleShape rectBlanco(sf::Vector2f(LADO_CASILLA, LADO_CASILLA));
 
 
-					if (j == mySelf.id) {
-						if (!mySelf.alive) {
-							rectBlanco.setFillColor(sf::Color::Magenta);
-						}
-						else {
-							rectBlanco.setFillColor(sf::Color::Blue);
-						}
+				if (aPlayers[j].id == myId) {
+					if (!aPlayers[j].alive) {
+						rectBlanco.setFillColor(sf::Color::Magenta);
 					}
 					else {
-						if (!aPlayers[j].alive)
-							rectBlanco.setFillColor(sf::Color::Red);
-						else
-							rectBlanco.setFillColor(sf::Color::White);
+						rectBlanco.setFillColor(sf::Color::Blue);
 					}
-
-					rectBlanco.setPosition(sf::Vector2f(botones[j].x, botones[j].y/**LADO_CASILLA*/));
-					window.draw(rectBlanco);
 				}
-	
+				else {
+					if (!aPlayers[j].alive)
+						rectBlanco.setFillColor(sf::Color::Red);
+					else
+						rectBlanco.setFillColor(sf::Color::White);
+				}
+
+				rectBlanco.setPosition(sf::Vector2f(botones[j].x, botones[j].y/**LADO_CASILLA*/));
+				window.draw(rectBlanco);
+			}
+
 			std::string mensaje_ = mensaje + "_";
 			text.setString(mensaje_);
 			window.draw(text);
@@ -515,204 +362,31 @@ void main() {
 			window.clear();
 
 			if (end) {
+				std::this_thread::sleep_for(std::chrono::seconds(2));
 				window.close();
 			}
+
+
+		
 		}
 
-		if (end) {
-			system("pause");
-		}
-		eventThread.join();
+		receptionThread.join();
 
-		end = true;
-
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-		////////////TODOS CONECTADOS//////////////////
-
-		//receiveThread.join();
+		socket->disconnect();
+		delete socket;
 	}
-	else {
-		std::cout << "ERROR\n";
+	else if (status == sf::Socket::Disconnected) {
+		std::cout << "Sevidor desconectado\n";
+
 	}
+	else if (status == sf::Socket::Error) {
+		std::cout << "Error de conexion\n";
+
+	}
+
+
+
+
+
+
 }
-
-
-//void EmptyMethod(sf::TcpSocket*socket) {
-//
-//}
-//void receiveMethod(sf::TcpSocket*socket, std::vector<std::string>* aMsjs, Player* mySelf, std::vector<Player>*aPlayers, bool* end, Player::Turn* currentTurn, Player::ROLE* maRole, int* myId) {
-//	while (!*end) {
-//		sf::Packet receptionPacket;
-//		std::string code;
-//
-//		sf::TcpSocket::Status status;
-//		status = socket->receive(receptionPacket);
-//
-//		if (status == sf::TcpSocket::Done) {
-//			receptionPacket >> code;
-//
-//			if (code == "PLAYERS_") {
-//				int roleId;
-//				receptionPacket >> mySelf->id;
-//
-//				receptionPacket >> roleId;
-//
-//				for (int i = 0; i < 6; i++) {
-//					std::string userName;
-//					int id;
-//
-//					receptionPacket >> userName;
-//					receptionPacket >> id;
-//
-//
-//					Player player(userName,id);
-//
-//					aPlayers->push_back(player);
-//
-//
-//
-//
-//					//delete aNewPlayer;
-//					std::cout<<"Receiving player with userName " << player.GetUserName() << " and id " << player.id << "\n";
-//				}
-//				aMsjs->push_back("Welcome to the world of Castronegro's wolf");
-//				aMsjs->push_back("The night will start shortly, stay safe");
-//
-//				mySelf = &aPlayers->at(mySelf->id);
-//				mySelf->role = (Player::ROLE)roleId;
-//
-//				switch (roleId) {
-//				case 0:
-//					mySelf->role = Player::ROLE::_VILLAGER;
-//					break;
-//				case 1:
-//					mySelf->role = Player::ROLE::_WOLF;
-//					break;
-//				case 2:
-//					mySelf->role = Player::ROLE::_WITCH;
-//					break;
-//				case 3:
-//					mySelf->role = Player::ROLE::_CHILD;
-//					break;
-//				}
-//
-//				std::cout << "YOUR ROLE IS " << mySelf->GetRoleAsString() << "\n";
-//				std::cout << "ROLE: " << mySelf->role << std::endl;
-//
-//				*maRole = mySelf->role;
-//				*myId = mySelf->id;
-//
-//
-//			}
-//			else if (code == "MSJ_") {
-//				std::string mensaje;
-//				receptionPacket >> mensaje;
-//				aMsjs->push_back(mensaje);
-//			}
-//			else if (code == "DEATH_") {
-//				aMsjs->clear();
-//
-//				int deadPlayerId;
-//				int deadPlayerRole;
-//				switch (*currentTurn) {
-//				case Player::Turn::_DAY:
-//					receptionPacket >> deadPlayerId;
-//					receptionPacket >> deadPlayerRole;
-//					aPlayers->at(deadPlayerId).role = (Player::ROLE)deadPlayerRole;
-//
-//					if (deadPlayerId >= 0 && deadPlayerId <= 11) {
-//						if (mySelf->id == deadPlayerId) {
-//							aMsjs->push_back("Has muerto");
-//
-//							mySelf->alive = false;
-//						}
-//						else {
-//							aMsjs->push_back("Ha muerto " + aPlayers->at(deadPlayerId).userName + ", su rol era " + aPlayers->at(deadPlayerId).GetRoleAsString());
-//
-//							for (int i = 0; i < NUM_PLAYERS; i++) {
-//								if (aPlayers->at(i).id == deadPlayerId) {
-//									aPlayers->at(i).alive = false;
-//									aPlayers->at(i).wasAlive = false;
-//								}
-//							}
-//						}
-//					}
-//					*currentTurn = Player::Turn::_WOLVES;
-//					aMsjs->push_back("Se hace de noche en Castronegro");
-//					if (mySelf->role == Player::ROLE::_WOLF) {
-//						aMsjs->push_back("Debes ponerte de acuerdo con tus hermanos lobos");
-//					}
-//
-//					break;
-//				case Player::Turn::_WOLVES:
-//					if (mySelf->role == Player::ROLE::_WITCH) {
-//						if (mySelf->id == deadPlayerId) {
-//							mySelf->alive = false;
-//						}
-//						else {
-//							for (int i = 0; i < NUM_PLAYERS; i++) {
-//								if (aPlayers->at(i).id == deadPlayerId) {
-//									aPlayers->at(i).alive = false;
-//								}
-//							}
-//						}
-//					}
-//					*currentTurn = Player::Turn::_WITCHTURN;
-//					aMsjs->push_back("Es el turno de la bruja");
-//					if (mySelf->role == Player::ROLE::_WITCH) {
-//						aMsjs->push_back("Debes votar aquien quieres matar");
-//						aMsjs->push_back("y votar a quien quieras revivir");
-//
-//					}
-//					break;
-//				case Player::Turn::_WITCHTURN:
-//					receptionPacket >> deadPlayerId;
-//
-//					if (mySelf->id == deadPlayerId) {
-//						mySelf->alive = false;
-//					}
-//					else {
-//						for (int i = 0; i < NUM_PLAYERS; i++) {
-//							if (aPlayers->at(i).id == deadPlayerId) {
-//								aPlayers->at(i).alive = false;
-//								aPlayers->at(i).wasAlive = false;
-//							}
-//						}
-//					}
-//					*currentTurn = Player::Turn::_DAY;
-//					aMsjs->push_back("Se hace de dia en Castronegro");
-//
-//					break;
-//				}
-//
-//			}
-//			else if (code == "GAME_OVER_") {
-//				int whoWins;
-//
-//				receptionPacket >> whoWins;
-//
-//				if (whoWins == 0) {
-//					aMsjs->push_back("Todos los lobos han muerto, ganan los pueblos!");
-//				}
-//				else {
-//					aMsjs->push_back("Han muerto todos los pueblerinos, ganan los lobos!");
-//				}
-//				
-//
-//
-//				*end = true;
-//			}
-//		}
-//		else if(status==sf::TcpSocket::Status::Disconnected){
-//			std::cout << "Desconexion del servidor\n";
-//			socket->disconnect();
-//			*end = true;
-//		}
-//		else if (status == sf::TcpSocket::Status::Error) {
-//			std::cout << "ERROR CRITICO DE RECEPCIÓN\n";
-//		}
-//	}
-//}

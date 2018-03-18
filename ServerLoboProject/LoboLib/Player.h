@@ -16,8 +16,8 @@ public:
 	bool alive;
 	//Bool para el turno anterior
 	bool wasAlive;
-	enum ROLE{_WOLF = 1,_VILLAGER = 0,_WITCH = 2,_CHILD = 3,_UNKNOWN=4};
-	enum Turn { _DAY, _WOLVES, _WITCHTURN };
+	enum ROLE{_WOLF = 1,_VILLAGER = 0,_CHILD = 2,_UNKNOWN=3};
+	enum Turn { _DAY, _WOLVES };
 
 	ROLE role;
 	int id;
@@ -27,16 +27,16 @@ public:
 
 		switch (role) {
 		case ROLE::_VILLAGER:
-			temp = "Villager";
+			temp = "V";
 			break;
 			case ROLE::_WOLF:
-			temp = "Wolf";
+			temp = "W";
 			break;
-		case ROLE::_WITCH:
-			temp = "BWitch";
+		case ROLE::_UNKNOWN:
+			temp = "U";
 			break;
 		case ROLE::_CHILD:
-			temp = "Child";
+			temp = "C";
 			break;
 		}
 
@@ -70,6 +70,11 @@ public:
 	sf::TcpSocket* socket;
 	int currentVotes = 0;
 	bool voted = false;
+
+	~PlayerServer() {
+		if(socket!=nullptr)
+		delete socket;
+	}
 
 	PlayerServer(sf::TcpSocket* s, std::string name) {
 		socket = s;
