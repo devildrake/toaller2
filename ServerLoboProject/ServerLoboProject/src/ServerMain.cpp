@@ -24,13 +24,18 @@ void socketSelectorMethod(std::vector<PlayerServer*>*aPlayers, std::queue<sf::Pa
 					std::cout << "Packet recibido y encolado\n";
 				}
 				else if (status == sf::Socket::Disconnected) {
+
 					std::cout << "Desconexion de un socket\n";
 					ss.remove(*aPlayers->at(i)->socket);
 					delete aPlayers->at(i)->socket;
 					aPlayers->at(i)->alive = false;
-					sf::Packet forcedVotePacket;
 
+					sf::Packet forcedPacket;
 
+					forcedPacket << "DISCONNECT_";
+					forcedPacket << i;
+
+					aEventos->push(forcedPacket);
 
 				}
 				else if (status == sf::Socket::Error) {
@@ -101,9 +106,9 @@ void EndTurn(Player::Turn* turn, std::vector<PlayerServer*>* aPlayers) {
 		}
 		else if (status == sf::Socket::Disconnected) {
 			std::cout << "Intentando enviar packet de players muertos a jugador desconectado\n";
-			aPlayers->at(i)->socket->disconnect();
-			delete aPlayers->at(i)->socket;
-			aPlayers->at(i)->socket = nullptr;
+			//aPlayers->at(i)->socket->disconnect();
+			//delete aPlayers->at(i)->socket;
+			//aPlayers->at(i)->socket = nullptr;
 
 
 		}
@@ -300,10 +305,13 @@ void main() {
 							status = aPlayers[i]->socket->send(remainingPlayersPacket);
 
 							if (status == sf::Socket::Disconnected) {
-								aPlayers[i]->alive = false;
-								aPlayers[i]->socket->disconnect();
-								delete aPlayers[i]->socket;
-								aPlayers[i]->socket = nullptr;
+								std::cout << "ERROR POR DESCONEXION DE EMISION DE REMAINING PLAYERS\n";
+
+								//aPlayers[i]->alive = false;
+								//aPlayers[i]->socket->disconnect();
+								//delete aPlayers[i]->socket;
+								//aPlayers[i]->socket = nullptr;
+
 							}
 							else if (status == sf::Socket::Error) {
 								std::cout << "ERROR RANDOM DE EMISION DE REMAINING PLAYERS\n";
@@ -369,13 +377,13 @@ void main() {
 				std::cout << "Desconexion inesperada con un socket\n";
 				end = true;
 
-				for (int i = 0; i < aPlayers.size(); i++) {
 					aPlayers[i]->alive = false;
 					delete aPlayers[i]->socket;
-					aPlayers[i]->socket = nullptr;
+					delete aPlayers[i];
+					aPlayers.erase(aPlayers.begin() + i);
 					//delete aPlayers[i];
 					//aPlayers.erase(aPlayers.begin() + i);
-				}
+				
 
 			}
 			else if (status == sf::Socket::Error) {
@@ -638,11 +646,41 @@ void main() {
 
 
 				}
+				else if (code == "DISCONNECT_") {
+					int disconnectedId;
+					packet >> disconnectedId;
+					sf::Packet disconnectMessagePacket;
+					disconnectMessagePacket << "DISCONNECT_";
+					disconnectMessagePacket << disconnectedId;
+					disconnectMessagePacket << (int)aPlayers[disconnectedId]->role;
+					ResetVotes(&aPlayers);
+					for (int i = 0; i < aPlayers.size(); i++) {
+						if (aPlayers[i]->socket != nullptr) {
+							status = aPlayers[i]->socket->send(disconnectMessagePacket);
+							if (status == sf::Socket::Done) {
+								std::cout << "Mensaje reenviado\n";
+							}
+							else {
+								std::cout << "Ha habido algun problema reenviando el mensaje\n";
+							}
+						}
+						else {
+							aPlayers[i]->alive = false;
+						}
+					}
+
+
+				}
 
 
 				aEventos.pop();
 			}
 		}
+
+		for (int i = 0; i < aPlayers.size();i++) {
+			delete aPlayers[i];
+		}
+
 
 		receptionMethod.join();
 		system("pause");

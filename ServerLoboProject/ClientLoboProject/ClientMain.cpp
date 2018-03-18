@@ -206,6 +206,20 @@ void main() {
 					aMensajes.push_back(mensaje);
 					end = true;
 				}
+				else if (code == "DISCONNECT_") {
+					aMensajes.clear();
+					int discId;
+					int roleId;
+					packet >> discId;
+					packet >> roleId;
+
+
+					aMensajes.push_back(aPlayers[discId].GetUserName() + " se ha desconectado");
+					aPlayers[discId].role = (Player::ROLE)roleId;
+					aPlayers[discId].alive = false;
+					aMensajes.push_back("los votos se reinician");
+
+				}
 
 
 

@@ -72,8 +72,7 @@ public:
 	bool voted = false;
 
 	~PlayerServer() {
-		if(socket!=nullptr)
-		delete socket;
+
 	}
 
 	PlayerServer(sf::TcpSocket* s, std::string name) {
